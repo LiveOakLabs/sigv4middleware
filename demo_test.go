@@ -1,49 +1,122 @@
-package plugindemo_test
+package traefik_middleware_sigv4_test
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
+
+	plugin "github.com/samerbahri98/traefik-middleware-sigv4"
+
 	"testing"
 
-	"github.com/traefik/plugindemo"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsc "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	s3 "github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-func TestDemo(t *testing.T) {
-	cfg := plugindemo.CreateConfig()
-	cfg.Headers["X-Host"] = "[[.Host]]"
-	cfg.Headers["X-Method"] = "[[.Method]]"
-	cfg.Headers["X-URL"] = "[[.URL]]"
-	cfg.Headers["X-URL"] = "[[.URL]]"
-	cfg.Headers["X-Demo"] = "test"
+func prepareObject(bucketName, objectName *string, c *plugin.Config) error {
+	sdkConfig, err := awsc.LoadDefaultConfig(context.TODO(), awsc.WithRegion(c.Region), awsc.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(c.AccessKey, c.SecretKey, "")))
+
+	if err != nil {
+		return err
+	}
+
+	s3Client := s3.NewFromConfig(sdkConfig, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String("https://play.min.io")
+		o.UsePathStyle = true
+	})
+
+	output, err := s3Client.ListBuckets(context.TODO(), &s3.ListBucketsInput{})
+
+	if err != nil {
+		return err
+	}
+
+	bucketExists := false
+
+	for _, bucket := range output.Buckets {
+		bucketExists = aws.ToString(bucket.Name) == aws.ToString(bucketName)
+		if bucketExists {
+			break
+		}
+	}
+
+	if !bucketExists {
+		if _, err := s3Client.CreateBucket(context.TODO(), &s3.CreateBucketInput{
+			Bucket: bucketName,
+		}); err != nil {
+			return err
+		}
+	}
+
+	objectContent := "<h1>hi</h1>"
+	objectReader := strings.NewReader(objectContent)
+
+	if _, err := s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
+		Bucket: bucketName,
+		Key:    objectName,
+		Body:   objectReader,
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func TestHandler(t *testing.T) {
+	c := plugin.CreateConfig()
+	c.AccessKey = "Q3AM3UQ867SPQQA43P2F"
+	c.SecretKey = "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG"
+	c.Service = "s3"
+	c.Endpoint = "play.min.io"
+	c.Region = "us-east-1"
 
 	ctx := context.Background()
-	next := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {})
 
-	handler, err := plugindemo.New(ctx, next, cfg, "demo-plugin")
+	// Make Bucket
+	bucketName := aws.String("treafikmiddlewares3v4sig")
+	objectName := aws.String("index.html")
+
+	if err := prepareObject(bucketName, objectName, c); err != nil {
+		t.Fatal(err)
+	}
+
+	next := http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {})
+
+	handler, err := plugin.New(ctx, next, c, "foo")
+
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	recorder := httptest.NewRecorder()
+	reqURL := fmt.Sprintf("http://%s/%s/%s", c.Endpoint, *bucketName, *objectName)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://localhost", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	handler.ServeHTTP(recorder, req)
 
-	assertHeader(t, req, "X-Host", "localhost")
-	assertHeader(t, req, "X-URL", "http://localhost")
-	assertHeader(t, req, "X-Method", "GET")
-	assertHeader(t, req, "X-Demo", "test")
-}
+	res := recorder.Result()
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}()
 
-func assertHeader(t *testing.T, req *http.Request, key, expected string) {
-	t.Helper()
+	body, err := io.ReadAll(recorder.Result().Body)
 
-	if req.Header.Get(key) != expected {
-		t.Errorf("invalid header value: %s", req.Header.Get(key))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Errorf("Expected status OK; got %v: %v", recorder.Result().StatusCode, string(body))
 	}
 }
