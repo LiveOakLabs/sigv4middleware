@@ -18,3 +18,8 @@ vendor:
 
 clean:
 	rm -rf ./vendor
+
+.PHONY: mc
+mc:
+	mc mb -p play/treafikmiddlewares3v4sig
+	echo "<h1>hi</h1>" | mc pipe play/treafikmiddlewares3v4sig/index.html

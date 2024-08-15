@@ -1,4 +1,4 @@
-package traefik_middleware_sigv4
+package sigv4
 
 import (
 	"bytes"
