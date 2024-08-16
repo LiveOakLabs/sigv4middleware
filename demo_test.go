@@ -1,4 +1,4 @@
-package sigv4_test
+package sigv4middleware_test
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	plugin "github.com/samerbahri98/traefik-middleware-sigv4"
+	plugin "github.com/samerbahri98/sigv4middleware"
 
 	"testing"
 )

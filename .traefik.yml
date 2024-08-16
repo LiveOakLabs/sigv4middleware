@@ -2,7 +2,7 @@ displayName: AWS Sigv4 Auth
 type: middleware
 iconPath: .assets/icon.png
 
-import: github.com/samerbahri98/traefik-middleware-sigv4
+import: github.com/samerbahri98/sigv4middleware
 
 summary: Sign AWS requests
 

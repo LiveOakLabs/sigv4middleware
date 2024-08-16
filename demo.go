@@ -1,4 +1,4 @@
-package sigv4
+package sigv4middleware
 
 import (
 	"bytes"

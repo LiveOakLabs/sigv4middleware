@@ -22,8 +22,8 @@ The plugin can be used to serve static sites from an s3-compatible provider.
 # traefik.yml
 experimental:
   plugins:
-    traefik_middleware_sigv4:
-      moduleName: "github.com/samerbahri98/traefik-middleware-sigv4"
+    sigv4middleware:
+      moduleName: "github.com/samerbahri98/sigv4middleware"
       # Populate this with the latest release tag.
       version: vX.Y.Z
 ```
@@ -33,7 +33,7 @@ http:
   middlewares:
     sigv4:
       plugin:
-        traefik_middleware_sigv4:
+        sigv4middleware:
           accessKey: ROOTNAME
           secretKey: CHANGEME123
           service: s3
