@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -82,7 +83,10 @@ func (p *Plugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateConfig() *Config {
-	return &Config{}
+	return &Config{
+		AccessKey: os.Getenv("AWS_ACCESS_KEY_ID"),
+		SecretKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
+	}
 }
 
 func New(_ context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {

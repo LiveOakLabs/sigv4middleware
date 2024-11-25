@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 
@@ -14,17 +15,11 @@ import (
 
 func TestHandler(t *testing.T) {
 	c := plugin.CreateConfig()
-	c.AccessKey = "Q3AM3UQ867SPQQA43P2F"
-	c.SecretKey = "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG"
-	c.Service = "s3"
-	c.Endpoint = "play.min.io"
+	c.Service = "lambda"
+	c.Endpoint = "s6jt2rgliirxvwbhfq7bpbakoe0aigbr.lambda-url.us-east-1.on.aws"
 	c.Region = "us-east-1"
 
 	ctx := context.Background()
-
-	// Make Bucket
-	bucketName := "treafikmiddlewares3v4sig"
-	objectName := "index.html"
 
 	next := http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {})
 
@@ -35,7 +30,7 @@ func TestHandler(t *testing.T) {
 	}
 
 	recorder := httptest.NewRecorder()
-	reqURL := fmt.Sprintf("http://%s/%s/%s", c.Endpoint, bucketName, objectName)
+	reqURL := fmt.Sprintf("https://%s/health", c.Endpoint)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
@@ -60,4 +55,13 @@ func TestHandler(t *testing.T) {
 	if recorder.Result().StatusCode != http.StatusOK {
 		t.Errorf("Expected status OK; got %v: %v", recorder.Result().StatusCode, string(body))
 	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal("ServeHTTP:", err)
+	}
+	defer resp.Body.Close()
+
+	log.Println(req.RemoteAddr, " ", resp.Status)
 }
