@@ -1,3 +1,3 @@
-module github.com/samerbahri98/sigv4middleware
+module github.com/LiveOakLabs/sigv4middleware
 
 go 1.22

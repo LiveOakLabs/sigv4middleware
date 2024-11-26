@@ -2,7 +2,7 @@ displayName: AWS Sigv4 Auth
 type: middleware
 iconPath: .assets/icon.png
 
-import: github.com/samerbahri98/sigv4middleware
+import: github.com/LiveOakLabs/sigv4middleware
 
 summary: Sign AWS requests
 
